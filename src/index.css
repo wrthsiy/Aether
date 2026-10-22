@@ -1,0 +1,115 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root { --muted: color-mix(in srgb, var(--text) 55%, transparent); color-scheme: dark; }
+:root:not(.dark) { color-scheme: light; }
+html, body, #root { height: 100%; margin: 0; }
+body { background: var(--bg-editor); color: var(--text); font-family: Inter, system-ui, sans-serif; }
+
+/* Glassmorphism */
+.glass {
+  background: color-mix(in srgb, var(--bg-preview) 62%, transparent);
+  backdrop-filter: blur(16px) saturate(140%); -webkit-backdrop-filter: blur(16px) saturate(140%);
+  border: 1px solid color-mix(in srgb, var(--text) 12%, transparent);
+}
+.btn { padding: .3rem .65rem; border-radius: .6rem; font-size: .85rem; cursor: pointer; color: var(--text);
+  background: color-mix(in srgb, var(--text) 8%, transparent); border: 1px solid transparent; transition: background .15s; }
+.btn:hover { background: color-mix(in srgb, var(--accent) 25%, transparent); }
+.btn.on { background: var(--accent); color: #fff; }
+.btn:focus-visible, input:focus-visible, select:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.cm-editor { height: 100%; }
+.zen .cm-content { max-width: 48rem; margin: 0 auto; }
+
+/* Theme Studio: right slide-out on desktop, bottom sheet on mobile */
+.studio { position: fixed; z-index: 30; top: 3rem; right: 0; bottom: 1.75rem; width: 340px; overflow-y: auto;
+  padding: 1rem; transform: translateX(105%); transition: transform .3s cubic-bezier(.2,.8,.2,1); }
+.studio.open { transform: none; }
+.studio h3 { margin: 1rem 0 .3rem; font-weight: 700; font-size: .95rem; }
+@media (max-width: 768px) {
+  .studio { top: auto; left: 0; right: 0; bottom: 0; width: auto; height: 60vh; transform: translateY(105%); }
+  .studio.open { transform: none; }
+}
+.toc { position: absolute; top: 12px; left: 12px; z-index: 5; width: 220px; max-height: 70%; overflow: auto;
+  padding: .7rem; border-radius: .9rem; font-size: .85rem; animation: pop .2s ease-out; }
+.toc button { display: block; width: 100%; text-align: left; padding: .2rem 0; background: none; border: 0; color: var(--text); cursor: pointer; }
+.toc button:hover { color: var(--accent); }
+.fade-in { animation: pop .25s ease-out; }
+@keyframes pop { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
+
+/* Print / PDF: show only the rendered article */
+@media print {
+  body * { visibility: hidden; }
+  .print-area, .print-area * { visibility: visible; }
+  .print-area { position: absolute; left: 0; top: 0; width: 100%; max-width: none !important; }
+  .pp { height: auto !important; overflow: visible !important; position: static !important; display: block !important; }
+  .bg-layer, .bg-stack, .no-print { display: none !important; }
+  html, body { background: #fff !important; }
+  .preview { background: #fff !important; color: #000 !important; backdrop-filter: none !important; border: 0 !important; }
+  .copy-btn { display: none !important; }
+}
+
+/* ================= Editor effects (all driven by CSS variables + data-* attrs set in Editor.tsx) ================= */
+.fx-off { opacity: .5; pointer-events: none; }
+.sec { border-top: 1px solid color-mix(in srgb, var(--text) 12%, transparent); padding: .3rem 0; }
+.sec > summary { cursor: pointer; font-weight: 700; padding: .4rem 0; }
+.cm-editor { position: relative; }
+
+/* Cursor styles. Colors fall back to the accent at the point of use (keeps hue-shift working). */
+.cm-editor .cm-cursorLayer { animation-duration: var(--cursor-blink, 1.1s) !important; }
+.cm-editor[data-cursor="block"] .cm-cursor { border-left: 0 !important; width: .62em; opacity: .5; background: var(--cursor-color, var(--accent)); }
+.cm-editor[data-cursor="underline"] .cm-cursor { border-left: 0 !important; width: .62em; background: var(--cursor-color, var(--accent)); clip-path: inset(calc(100% - 2px) 0 0 0); }
+.cm-editor[data-cursor="glow"] .cm-cursor { box-shadow: 0 0 6px 1px var(--cursor-color, var(--accent)), 0 0 16px 3px color-mix(in srgb, var(--cursor-color, var(--accent)) 50%, transparent); }
+.cm-editor[data-cursor="pulse"] .cm-cursorLayer { animation: none !important; }
+.cm-editor[data-cursor="pulse"] .cm-cursor { animation: pulse-cursor var(--cursor-blink, 1.1s) ease-in-out infinite; }
+@keyframes pulse-cursor {
+  0%, 100% { opacity: 1; box-shadow: 0 0 0 0 transparent; }
+  50% { opacity: .3; box-shadow: 0 0 10px 2px var(--cursor-color, var(--accent)); }
+}
+
+/* Active line styles */
+.cm-editor[data-active-line="none"] .cm-activeLine { background: transparent; }
+.cm-editor[data-active-line="tint"] .cm-activeLine { background: color-mix(in srgb, var(--active-line-color, var(--accent)) 10%, transparent); }
+.cm-editor[data-active-line="border-left"] .cm-activeLine { background: color-mix(in srgb, var(--active-line-color, var(--accent)) 5%, transparent); box-shadow: inset 3px 0 0 var(--active-line-color, var(--accent)); }
+.cm-editor[data-active-line="glow"] .cm-activeLine { background: color-mix(in srgb, var(--active-line-color, var(--accent)) 8%, transparent); box-shadow: 0 0 18px color-mix(in srgb, var(--active-line-color, var(--accent)) 45%, transparent); }
+
+/* Line numbers */
+.cm-editor .cm-lineNumbers .cm-gutterElement { color: var(--line-number-color, var(--muted)); }
+.cm-editor[data-line-nums="dotted"] .cm-lineNumbers .cm-gutterElement { text-align: center; opacity: .8; }
+.cm-editor[data-line-nums="roman"] .cm-lineNumbers .cm-gutterElement { font-size: .78em; letter-spacing: .05em; }
+
+/* Focus mode: lines get .dimmed from a ViewPlugin */
+.cm-line.dimmed { opacity: var(--focus-dim, .35); transition: opacity .2s; }
+
+/* Editor background effects: overlay layers, never intercept pointer events */
+.cm-editor[data-bg-effect]:not([data-bg-effect="none"])::before { content: ''; position: absolute; inset: 0; z-index: 1; pointer-events: none; opacity: var(--editor-bg-intensity, .4); }
+.cm-editor[data-bg-effect="glass"]::before { background: linear-gradient(135deg, rgba(255,255,255,.14), transparent 40%, rgba(255,255,255,.05)); box-shadow: inset 0 0 0 1px rgba(255,255,255,.14), inset 0 0 40px rgba(255,255,255,.07); }
+.cm-editor[data-bg-effect="gradient"]::before { background: radial-gradient(circle at 12% 0%, color-mix(in srgb, var(--accent) 45%, transparent), transparent 55%), radial-gradient(circle at 100% 100%, color-mix(in srgb, var(--accent) 30%, transparent), transparent 50%); }
+.cm-editor[data-bg-effect="noise"]::before { mix-blend-mode: overlay; background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 .5 0 0 0 0 .5 0 0 0 0 .5 0 0 0 .7 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E"); }
+.cm-editor[data-bg-effect="grid"]::before { background-image: linear-gradient(color-mix(in srgb, var(--text) 14%, transparent) 1px, transparent 1px), linear-gradient(90deg, color-mix(in srgb, var(--text) 14%, transparent) 1px, transparent 1px); background-size: 24px 24px; }
+.cm-editor[data-bg-effect="dots"]::before { background-image: radial-gradient(color-mix(in srgb, var(--text) 30%, transparent) 1px, transparent 1.6px); background-size: 18px 18px; }
+
+/* Cursor trail ghosts (DOM, no canvas). Colors: --trail-color → --cursor-color → accent */
+.cm-trail { position: absolute; inset: 0; z-index: 3; pointer-events: none; overflow: hidden; }
+.trail-dot { position: absolute; width: 3px; border-radius: 2px; pointer-events: none;
+  background: var(--trail-color, var(--cursor-color, var(--accent)));
+  box-shadow: 0 0 8px 2px var(--trail-color, var(--cursor-color, var(--accent)));
+  animation: trail-fade .55s ease-out forwards; }
+@keyframes trail-fade { from { opacity: .8; transform: scale(1); } to { opacity: 0; transform: scale(.4); } }
+
+/* Reduced motion: no animation anywhere, trail ghosts would freeze so they're hidden */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation: none !important; transition: none !important; }
+  .trail-dot { display: none; }
+}
+/* Print: every effect off */
+@media print {
+  .cm-editor::before, .cm-editor::after, .cm-trail { display: none !important; }
+  body { animation: none !important; }
+}
+
+/* Parallax: only on devices with a real pointer */
+@media (hover: hover) and (pointer: fine) {
+  body.parallax .bg-stack { transform: translate3d(calc(var(--px, 0) * var(--parallax-strength, 12px) * -1), calc(var(--py, 0) * var(--parallax-strength, 12px) * -1), 0) scale(1.1); transition: transform .25s ease-out; }
+}
+.bg-stack, .bg-stack * { pointer-events: none; }
