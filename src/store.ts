@@ -44,6 +44,13 @@ export const EFFECT_PRESETS: Record<string, Partial<EffectSettings>> = {
   Focus: { frostedEdgeEnabled: true, focusMode: true, typewriterScroll: true },
 };
 
+/** Phone detection shared by CSS (same query) and JS. */
+export const PHONE_Q = '(max-width: 768px), (pointer: coarse) and (max-height: 500px)';
+export const isPhone = () => typeof matchMedia !== 'undefined' && matchMedia(PHONE_Q).matches;
+/** First-launch values on phones (and "Reset to defaults" there). Saved settings are never overridden. */
+export const startDefaults = (): ResolvedSettings =>
+  isPhone() ? { ...DEFAULTS, fontSize: 17, lineNumbers: false, typewriterScroll: true } : DEFAULTS;
+
 interface State {
   settings: ThemeSettings; mode: Mode; studioOpen: boolean; tocOpen: boolean; content: string; savedAt: number;
   patch: (p: Partial<ThemeSettings>) => void; applyPreset: (name: string) => void;
@@ -53,11 +60,11 @@ interface State {
 export const useStore = create<State>()(
   persist(
     (setS) => ({
-      settings: DEFAULTS, mode: 'split', studioOpen: false, tocOpen: false, content: '', savedAt: Date.now(),
+      settings: startDefaults(), mode: 'split', studioOpen: false, tocOpen: false, content: '', savedAt: Date.now(),
       patch: (p) => setS((s) => ({ settings: { ...s.settings, ...p } })),
       // presets replace each other: reset all effects first, then apply
       applyPreset: (n) => setS((s) => ({ settings: { ...s.settings, ...EFFECT_DEFAULTS, ...EFFECT_PRESETS[n] } })),
-      reset: () => setS((s) => { if (s.settings.bgImage) URL.revokeObjectURL(s.settings.bgImage); return { settings: DEFAULTS }; }),
+      reset: () => setS((s) => { if (s.settings.bgImage) URL.revokeObjectURL(s.settings.bgImage); return { settings: startDefaults() }; }),
       toggleDark: () => setS((s) => ({ settings: { ...s.settings, dark: !s.settings.dark, ...(s.settings.dark ? PALETTES.light : PALETTES.dark) } })),
       setMode: (mode) => setS({ mode }),
       toggle: (k) => setS((s) => ({ [k]: !s[k] }) as Partial<State>),
@@ -66,7 +73,8 @@ export const useStore = create<State>()(
     {
       name: 'aether-settings',
       partialize: (s) => ({ settings: { ...s.settings, bgImage: null }, mode: s.mode === 'zen' ? 'split' : s.mode }),
-      merge: (p, c) => ({ ...c, ...(p as object), settings: { ...DEFAULTS, ...(p as any)?.settings } }),
+      // nothing saved yet (first launch) → keep the initial, possibly phone-tuned, settings
+      merge: (p, c) => ({ ...c, ...(p as object), settings: (p as any)?.settings ? { ...DEFAULTS, ...(p as any).settings } : c.settings }),
     }
   )
 );

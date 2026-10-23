@@ -1,5 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
-import { useStore, useSettings, loadDoc, markLoaded, saveNow } from './store';
+import { useStore, useSettings, loadDoc, markLoaded, saveNow, isPhone } from './store';
+import { useIsPhone, useVisualViewport } from './mobile';
+import FormatBar from './components/FormatBar';
 import { DEMO } from './demo';
 import { b64decode } from './util';
 import Toolbar from './components/Toolbar';
@@ -37,6 +39,7 @@ function useApplyTheme() {
     };
     Object.entries(opt).forEach(([k, val]) => (val ? r.style.setProperty(k, val) : r.style.removeProperty(k)));
     r.classList.toggle('dark', s.dark);
+    document.querySelector('meta[name="theme-color"]')?.setAttribute('content', s.bgEditor); // browser/PWA chrome color
     const flags: Record<string, boolean> = {
       breathing: s.breathingEnabled, ambient: s.ambientEnabled, 'hue-shift': s.hueShiftEnabled,
       'frosted-edge': s.frostedEdgeEnabled, paper: s.paperEnabled, crt: s.crtEnabled,
@@ -65,8 +68,12 @@ function useApplyTheme() {
 }
 
 export default function App() {
-  const s = useApplyTheme();
-  const { mode, setMode, setContent } = useStore();
+  useApplyTheme();
+  useVisualViewport();
+  const phone = useIsPhone();
+  const { mode: savedMode, setMode, setContent } = useStore();
+  // Split doesn't exist on phones: a saved "split" is shown as Edit (the stored value is left alone)
+  const mode = phone && savedMode === 'split' ? 'focus' : savedMode;
   const [ready, setReady] = useState(false);
   const [split, setSplit] = useState(50);
   const box = useRef<HTMLDivElement>(null);
@@ -88,18 +95,16 @@ export default function App() {
 
   // Esc leaves Zen mode
   useEffect(() => {
-    const k = (e: KeyboardEvent) => { if (e.key === 'Escape' && useStore.getState().mode === 'zen') setMode('split'); };
+    const k = (e: KeyboardEvent) => { if (e.key === 'Escape' && useStore.getState().mode === 'zen') setMode(isPhone() ? 'focus' : 'split'); };
     window.addEventListener('keydown', k); return () => window.removeEventListener('keydown', k);
   }, [setMode]);
 
-  // Draggable divider (horizontal on desktop, vertical on mobile)
+  // Draggable divider (desktop only; phones have no split view)
   const drag = (e: React.PointerEvent<HTMLDivElement>) => {
     const el = e.currentTarget; el.setPointerCapture(e.pointerId);
-    const mobile = matchMedia('(max-width:768px)').matches;
     const mv = (ev: PointerEvent) => {
       const r = box.current!.getBoundingClientRect();
-      const p = mobile ? (ev.clientY - r.top) / r.height : (ev.clientX - r.left) / r.width;
-      setSplit(Math.min(80, Math.max(20, p * 100)));
+      setSplit(Math.min(80, Math.max(20, ((ev.clientX - r.left) / r.width) * 100)));
     };
     const up = () => { el.removeEventListener('pointermove', mv); el.removeEventListener('pointerup', up); };
     el.addEventListener('pointermove', mv); el.addEventListener('pointerup', up);
@@ -108,9 +113,11 @@ export default function App() {
   if (!ready) return null;
   const zen = mode === 'zen';
   const showEd = mode !== 'preview', showPv = mode === 'split' || mode === 'preview';
+  // On phones the root is pinned to the visual viewport so the keyboard never covers the status bar / format bar
+  const phoneRoot = phone ? { position: 'fixed' as const, top: 0, left: 0, right: 0, height: 'var(--vvh, 100%)', transform: 'translateY(var(--vvtop, 0px))' } : {};
 
   return (
-    <div className="pp flex h-full flex-col" style={{ background: 'var(--bg-editor)' }}>
+    <div className="pp flex h-full flex-col" style={{ background: 'var(--bg-editor)', ...phoneRoot }}>
       {!zen && <Toolbar />}
       <main ref={box} className="pp flex min-h-0 flex-1 flex-col md:flex-row">
         <section className={`pp min-h-0 min-w-0 ${zen ? 'zen' : ''}`}
@@ -125,7 +132,14 @@ export default function App() {
         {showPv && <section className="pp fade-in min-h-0 min-w-0 flex-1"><Preview /></section>}
       </main>
       {!zen && <StatusBar />}
-      {zen && <div className="fixed bottom-3 right-4 text-xs" style={{ color: 'var(--muted)' }}>Esc to exit Zen</div>}
+      {!zen && <FormatBar />}
+      {zen && <div className="zen-hint fixed bottom-3 right-4 text-xs" style={{ color: 'var(--muted)' }}>Esc to exit Zen</div>}
+      {zen && (
+        // touch devices have no Esc key: faint 44px button in the corner
+        <button className="zen-exit no-print" aria-label="Exit Zen mode" onClick={() => setMode(phone ? 'focus' : 'split')}>
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M6 6l12 12M18 6L6 18" /></svg>
+        </button>
+      )}
       {!zen && <ThemeStudio />}
     </div>
   );

@@ -1,8 +1,10 @@
-import { ReactNode } from 'react';
+import { ReactNode, useEffect, useState } from 'react';
+import { useIsPhone, useVvHeight } from '../mobile';
 import { EFFECT_DEFAULTS, EFFECT_PRESETS, PRESETS, useSettings, useStore } from '../store';
 import { BoolKey, EffectSettings, NumKey, ResolvedSettings, ThemeSettings } from '../types';
 
 type P = Partial<ThemeSettings>;
+type Snap = 'peek' | 'half' | 'full';
 type ColorKey = 'bgEditor' | 'bgPreview' | 'text' | 'accent' | 'codeBg';
 type OptColorKey = 'cursorColor' | 'activeLineColor' | 'lineNumberColor' | 'cursorTrailColor';
 type SelKey = 'editorFont' | 'previewFont' | 'bgMode' | 'cursorStyle' | 'activeLineStyle' | 'lineNumberStyle' | 'editorBgEffect' | 'soundType' | 'paperType';
@@ -76,6 +78,29 @@ const Section = ({ title, keys, children }: { title: string; keys: (keyof Effect
 export default function ThemeStudio() {
   const { studioOpen, toggle, reset, patch, applyPreset } = useStore();
   const s: ResolvedSettings = useSettings(), g = s.gradient;
+
+  // ----- phone bottom sheet: drag the handle; snap points peek / half / full; drag below peek to close -----
+  const phone = useIsPhone(), vvh = useVvHeight();
+  const [snap, setSnap] = useState<Snap>('half');
+  const [dragY, setDragY] = useState<number | null>(null);
+  useEffect(() => { if (studioOpen) setSnap('half'); }, [studioOpen]);
+  const H = Math.round(vvh * 0.92);
+  const vis: Record<Snap, number> = { peek: 130, half: Math.round(vvh * 0.5), full: H }; // px of the sheet that stay on screen
+  const y = dragY ?? (studioOpen ? H - vis[snap] : H + 24); // translateY of the sheet
+  const startDrag = (e: React.PointerEvent<HTMLDivElement>) => {
+    const el = e.currentTarget; el.setPointerCapture(e.pointerId);
+    const y0 = e.clientY, base = H - vis[snap]; let cur = base; setDragY(base);
+    const mv = (ev: PointerEvent) => { cur = Math.min(H + 24, Math.max(0, base + ev.clientY - y0)); setDragY(cur); };
+    const up = () => {
+      el.removeEventListener('pointermove', mv); el.removeEventListener('pointerup', up); el.removeEventListener('pointercancel', up);
+      setDragY(null);
+      if (Math.abs(cur - base) < 4) { setSnap(snap === 'peek' ? 'half' : snap === 'half' ? 'full' : 'peek'); return; } // plain tap cycles
+      const shown = H - cur;
+      if (shown < vis.peek - 50) { useStore.setState({ studioOpen: false }); return; }
+      setSnap((Object.keys(vis) as Snap[]).reduce((a, k) => (Math.abs(vis[k] - shown) < Math.abs(vis[a] - shown) ? k : a), 'half' as Snap));
+    };
+    el.addEventListener('pointermove', mv); el.addEventListener('pointerup', up); el.addEventListener('pointercancel', up);
+  };
   const setG = (p: Partial<typeof g>) => patch({ gradient: { ...g, enabled: true, ...p } });
   const setStop = (i: number, c: string) => setG({ stops: g.stops.map((x, j) => (j === i ? c : x)) });
   const upload = (f?: File) => {
@@ -85,11 +110,14 @@ export default function ThemeStudio() {
   };
 
   return (
-    <aside className={`studio glass no-print ${studioOpen ? 'open' : ''}`} aria-hidden={!studioOpen} aria-label="Theme Studio">
-      <div className="flex items-center justify-between">
-        <h2 className="text-lg font-bold">Theme Studio</h2>
-        <button className="btn" onClick={() => toggle('studioOpen')} aria-label="Close">✕</button>
-      </div>
+  <aside className={`studio glass no-print ${studioOpen ? 'open' : ''}`} aria-hidden={!studioOpen} aria-label="Theme Studio"
+  style={phone ? { height: H, transform: `translateY(${y}px)`, transition: dragY !== null ? 'none' : undefined,
+    paddingTop: 28, paddingBottom: H - vis[snap] + 16 /* lets the hidden part of the content scroll into view */ } : undefined}>
+  <div className="sheet-handle" onPointerDown={startDrag} role="separator" aria-label="Drag to resize Theme Studio"><span /></div>
+  <div className="flex items-center justify-between">
+    <h2 className="text-lg font-bold">Theme Studio</h2>
+    <button className="btn" onClick={() => toggle('studioOpen')} aria-label="Close">✕</button>
+  </div>
 
       <h3>Effect presets</h3>
       <div className="flex flex-wrap gap-1">

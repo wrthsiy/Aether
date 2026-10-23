@@ -5,6 +5,8 @@
 :root { --muted: color-mix(in srgb, var(--text) 55%, transparent); color-scheme: dark; }
 :root:not(.dark) { color-scheme: light; }
 html, body, #root { height: 100%; margin: 0; }
+html, body { overflow: hidden; overscroll-behavior: none; }
+body { -webkit-tap-highlight-color: transparent; }
 body { background: var(--bg-editor); color: var(--text); font-family: Inter, system-ui, sans-serif; }
 
 /* Glassmorphism */
@@ -26,9 +28,13 @@ body { background: var(--bg-editor); color: var(--text); font-family: Inter, sys
   padding: 1rem; transform: translateX(105%); transition: transform .3s cubic-bezier(.2,.8,.2,1); }
 .studio.open { transform: none; }
 .studio h3 { margin: 1rem 0 .3rem; font-weight: 700; font-size: .95rem; }
-@media (max-width: 768px) {
-  .studio { top: auto; left: 0; right: 0; bottom: 0; width: auto; height: 60vh; transform: translateY(105%); }
-  .studio.open { transform: none; }
+/* Phone layout: Theme Studio becomes a bottom sheet (height/transform are set inline by ThemeStudio.tsx) */
+.sheet-handle { display: none; }
+@media (max-width: 768px), (pointer: coarse) and (max-height: 500px) {
+  .studio { top: auto; left: 0; right: 0; bottom: 0; width: auto; transform: translateY(105%); border-radius: 16px 16px 0 0; overscroll-behavior: contain; }
+  .sheet-handle { display: flex; justify-content: center; align-items: center; position: absolute; top: 0; left: 0; right: 0; z-index: 2; height: 28px; margin: 0;
+    touch-action: none; cursor: grab; background: transparent; }
+  .sheet-handle span { width: 44px; height: 5px; border-radius: 3px; background: color-mix(in srgb, var(--text) 35%, transparent); }
 }
 .toc { position: absolute; top: 12px; left: 12px; z-index: 5; width: 220px; max-height: 70%; overflow: auto;
   padding: .7rem; border-radius: .9rem; font-size: .85rem; animation: pop .2s ease-out; }
@@ -44,7 +50,7 @@ body { background: var(--bg-editor); color: var(--text); font-family: Inter, sys
   .print-area { position: absolute; left: 0; top: 0; width: 100%; max-width: none !important; }
   .pp { height: auto !important; overflow: visible !important; position: static !important; display: block !important; }
   .bg-layer, .bg-stack, .no-print { display: none !important; }
-  html, body { background: #fff !important; }
+  html, body { background: #fff !important; overflow: visible !important; height: auto !important; }
   .preview { background: #fff !important; color: #000 !important; backdrop-filter: none !important; border: 0 !important; }
   .copy-btn { display: none !important; }
 }
@@ -113,3 +119,26 @@ body { background: var(--bg-editor); color: var(--text); font-family: Inter, sys
   body.parallax .bg-stack { transform: translate3d(calc(var(--px, 0) * var(--parallax-strength, 12px) * -1), calc(var(--py, 0) * var(--parallax-strength, 12px) * -1), 0) scale(1.1); transition: transform .25s ease-out; }
 }
 .bg-stack, .bg-stack * { pointer-events: none; }
+
+/* ================= Mobile ================= */
+.bar-top { height: calc(3rem + env(safe-area-inset-top, 0px)); padding-top: env(safe-area-inset-top, 0px); }
+.bar-bottom { height: calc(1.75rem + env(safe-area-inset-bottom, 0px)); padding-bottom: env(safe-area-inset-bottom, 0px); }
+body.editing .bar-bottom { height: 1.75rem; padding-bottom: 0; } /* keyboard covers the home indicator */
+.swipe { touch-action: none; user-select: none; -webkit-user-select: none; }
+.more-menu { position: absolute; right: 0; top: calc(100% + 6px); z-index: 30; display: flex; flex-direction: column; gap: .25rem; min-width: 12rem; padding: .5rem; border-radius: .9rem; }
+.more-menu .btn { text-align: left; }
+.format-bar { display: flex; gap: .4rem; flex-shrink: 0; overflow-x: auto; padding: .35rem .6rem; border-left: 0; border-right: 0; border-bottom: 0; }
+.format-bar .btn { flex: 1 0 auto; }
+.zen-exit { display: none; position: fixed; z-index: 40; top: calc(env(safe-area-inset-top, 0px) + 6px); right: 6px; width: 44px; height: 44px;
+  align-items: center; justify-content: center; border: 0; border-radius: 50%; background: none; color: var(--text); opacity: .25; cursor: pointer; }
+.zen-exit:active, .zen-exit:focus-visible { opacity: 1; }
+@media (pointer: coarse) {
+  .zen-exit { display: flex; }
+  .zen-hint { display: none; }
+  .btn { min-height: 44px; min-width: 44px; }
+  input[type="range"] { height: 32px; }
+  input[type="color"] { min-width: 44px; min-height: 36px; }
+  select { min-height: 40px; }
+  input[type="checkbox"] { width: 22px; height: 22px; }
+  .toc button { padding: .55rem 0; }
+}

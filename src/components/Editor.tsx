@@ -8,6 +8,7 @@ import { syntaxHighlighting, defaultHighlightStyle } from '@codemirror/language'
 import { autocompletion, CompletionContext } from '@codemirror/autocomplete';
 import { useStore, useSettings, saveNow } from '../store';
 import { SoundType } from '../types';
+import { setEditorFocused } from '../mobile';
 
 // ---------- keymap helpers (unchanged) ----------
 const wrap = (m: string) => (v: EditorView) => {
@@ -23,6 +24,28 @@ const link = (v: EditorView) => {
   v.dispatch({ changes: { from, to, insert: `[${t}](url)` }, selection: { anchor: from + t.length + 3, head: from + t.length + 6 } });
   return true;
 };
+// ---------- actions for the touch FormatBar (same commands as the keymap + a few line helpers) ----------
+let current: EditorView | undefined;
+const prefixLines = (v: EditorView, p: string) => {
+  const { from, to } = v.state.selection.main, doc = v.state.doc;
+  const lines = [];
+  for (let i = doc.lineAt(from).number; i <= doc.lineAt(to).number; i++) lines.push(doc.line(i));
+  const all = lines.every((l) => l.text.startsWith(p)); // toggle: remove when every line already has it
+  v.dispatch({ changes: lines.map((l) => (all ? { from: l.from, to: l.from + p.length } : { from: l.from, insert: p })), userEvent: 'input' });
+  return true;
+};
+const heading = (v: EditorView) => { // cycles: none → # → ## → ### → none
+  const l = v.state.doc.lineAt(v.state.selection.main.head), m = /^(#{1,6}) /.exec(l.text);
+  const lvl = m ? m[1].length : 0, next = lvl >= 3 ? 0 : lvl + 1;
+  v.dispatch({ changes: { from: l.from, to: l.from + (m ? m[0].length : 0), insert: next ? '#'.repeat(next) + ' ' : '' }, userEvent: 'input' });
+  return true;
+};
+const run = (fn: (v: EditorView) => boolean) => { if (current) { fn(current); current.focus(); } };
+export const editorActions = {
+  bold: () => run(wrap('**')), italic: () => run(wrap('*')), link: () => run(link), heading: () => run(heading),
+  list: () => run((v) => prefixLines(v, '- ')), task: () => run((v) => prefixLines(v, '- [ ] ')),
+};
+
 const SNIPPETS: [string, string][] = [
   ['h1', '# '], ['h2', '## '], ['h3', '### '], ['task', '- [ ] '], ['quote', '> '],
   ['table', '| A | B |\n|---|---|\n| 1 | 2 |\n'], ['code', '```js\n\n```\n'],
@@ -90,7 +113,7 @@ const typewriter = ViewPlugin.fromClass(class {
   }
 });
 // padding lets the first and last lines reach the center too
-const twPad = EditorView.theme({ '.cm-content': { paddingTop: '45vh', paddingBottom: '45vh' } });
+const twPad = EditorView.theme({ '.cm-content': { paddingTop: 'calc(var(--vvh, 100vh) * 0.4)', paddingBottom: 'calc(var(--vvh, 100vh) * 0.4)' } });
 
 // ---------- cursor trail: fading DOM ghosts at previous caret positions ----------
 const trailPlugin = (len: number) => ViewPlugin.fromClass(class {
@@ -174,6 +197,7 @@ export default function Editor() {
           ]),
           C.nums.of([]), C.theme.of([]), base, C.attrs.of([]), C.focus.of([]), C.tw.of([]), C.trail.of([]),
           EditorView.updateListener.of((u) => {
+            if (u.focusChanged) setEditorFocused(u.view.hasFocus); // drives the touch format bar
             if (!u.docChanged) return;
             setContent(u.state.doc.toString());
             const { on, type, vol } = snd.current;
@@ -198,6 +222,27 @@ export default function Editor() {
     });
     return () => view.current?.destroy();
   }, [setContent, C]);
+
+  // expose the live view to the FormatBar actions
+  useEffect(() => {
+    current = view.current;
+    return () => { current = undefined; setEditorFocused(false); };
+  }, [setContent, C]);
+
+  // Keep the caret visible when the soft keyboard opens/closes
+  useEffect(() => {
+    const vv = window.visualViewport; if (!vv) return;
+    let raf = 0;
+    const f = () => {
+      cancelAnimationFrame(raf);
+      raf = requestAnimationFrame(() => {
+        const v = view.current;
+        if (v?.hasFocus) v.dispatch({ effects: EditorView.scrollIntoView(v.state.selection.main.head, { y: 'nearest', yMargin: 40 }) });
+      });
+    };
+    vv.addEventListener('resize', f);
+    return () => { vv.removeEventListener('resize', f); cancelAnimationFrame(raf); };
+  }, []);
 
   // Sync external changes (initial load, preview checkbox toggles) into the editor
   useEffect(() => {
