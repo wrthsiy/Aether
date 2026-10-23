@@ -1,11 +1,11 @@
 import { useEffect, useRef } from 'react';
 import { Compartment, EditorSelection, EditorState, RangeSetBuilder, Transaction } from '@codemirror/state';
 import { Decoration, DecorationSet, EditorView, ViewPlugin, ViewUpdate, keymap, lineNumbers, highlightActiveLine, drawSelection } from '@codemirror/view';
-import { defaultKeymap, history, historyKeymap } from '@codemirror/commands';
+import { defaultKeymap, history, historyKeymap, indentLess, indentMore } from '@codemirror/commands';
 import { markdown } from '@codemirror/lang-markdown';
 import { oneDark } from '@codemirror/theme-one-dark';
-import { syntaxHighlighting, defaultHighlightStyle } from '@codemirror/language';
-import { autocompletion, CompletionContext } from '@codemirror/autocomplete';
+import { syntaxHighlighting, defaultHighlightStyle, bracketMatching, indentUnit } from '@codemirror/language';
+import { autocompletion, closeBrackets, closeBracketsKeymap, CompletionContext } from '@codemirror/autocomplete';
 import { useStore, useSettings, saveNow } from '../store';
 import { SoundType } from '../types';
 import { setEditorFocused } from '../mobile';
@@ -61,13 +61,25 @@ function slash(c: CompletionContext) {
 const base = EditorView.theme({
   '&': { height: '100%', color: 'var(--text)', backgroundColor: 'var(--bg-editor)' },
   '&.cm-focused': { outline: 'none' },
-  '.cm-content': { caretColor: 'var(--cursor-color, var(--accent))', fontFamily: 'var(--font-editor)', fontSize: 'var(--fs)', lineHeight: 'var(--lh)',
+  '.cm-content': { caretColor: 'var(--cursor-color, var(--accent))', fontFamily: 'var(--font-editor)', fontSize: 'var(--fs-editor)', lineHeight: 'var(--lh-editor)',
     padding: '24px 0', fontVariantLigatures: 'var(--lig)', fontFeatureSettings: 'var(--feat)' },
   '.cm-cursor': { borderLeftColor: 'var(--cursor-color, var(--accent))' },
   '.cm-gutters': { backgroundColor: 'transparent', border: 'none', color: 'var(--line-number-color, var(--muted))' },
   '.cm-activeLineGutter': { backgroundColor: 'transparent' },
   '.cm-tooltip': { backgroundColor: 'var(--bg-preview)', border: '1px solid var(--muted)' },
 });
+
+// ---------- Tab key indents (opt-in). Esc then Tab moves focus out of the editor so keyboard users aren't trapped. ----------
+let tabEscaped = false;
+const MODIFIERS = ['Escape', 'Tab', 'Shift', 'Control', 'Alt', 'Meta'];
+const tabKeys = [
+  keymap.of([
+    { key: 'Escape', run: () => { tabEscaped = true; return false; } },
+    { key: 'Tab', run: (v) => { if (tabEscaped) { tabEscaped = false; return false; } return indentMore(v); } },
+    { key: 'Shift-Tab', run: (v) => { if (tabEscaped) { tabEscaped = false; return false; } return indentLess(v); } },
+  ]),
+  EditorView.domEventHandlers({ keydown(e) { if (!MODIFIERS.includes(e.key)) tabEscaped = false; return false; } }),
+];
 
 // ---------- line number formatters ----------
 const ROMAN: [number, string][] = [[1000, 'M'], [900, 'CM'], [500, 'D'], [400, 'CD'], [100, 'C'], [90, 'XC'], [50, 'L'], [40, 'XL'], [10, 'X'], [9, 'IX'], [5, 'V'], [4, 'IV'], [1, 'I']];
@@ -176,7 +188,7 @@ const isTyping = (tr: Transaction) =>
 export default function Editor() {
   const host = useRef<HTMLDivElement>(null);
   const view = useRef<EditorView>();
-  const C = useRef({ nums: new Compartment(), theme: new Compartment(), attrs: new Compartment(), focus: new Compartment(), tw: new Compartment(), trail: new Compartment() }).current;
+  const C = useRef({ nums: new Compartment(), theme: new Compartment(), attrs: new Compartment(), focus: new Compartment(), tw: new Compartment(), trail: new Compartment(), opts: new Compartment() }).current;
   const { content, setContent } = useStore();
   const s = useSettings();
   const snd = useRef({ on: false, type: 'mechanical' as SoundType, vol: 40 });
@@ -188,12 +200,12 @@ export default function Editor() {
       state: EditorState.create({
         doc: useStore.getState().content,
         extensions: [
-          history(), drawSelection(), highlightActiveLine(), EditorView.lineWrapping, markdown(),
+          history(), drawSelection(), highlightActiveLine(), C.opts.of(EditorView.lineWrapping), markdown(),
           autocompletion({ override: [slash] }),
           keymap.of([
             { key: 'Mod-b', run: wrap('**') }, { key: 'Mod-i', run: wrap('*') }, { key: 'Mod-k', run: link },
             { key: 'Mod-s', preventDefault: true, run: () => { saveNow(true); return true; } },
-            ...defaultKeymap, ...historyKeymap,
+            ...closeBracketsKeymap, ...defaultKeymap, ...historyKeymap,
           ]),
           C.nums.of([]), C.theme.of([]), base, C.attrs.of([]), C.focus.of([]), C.tw.of([]), C.trail.of([]),
           EditorView.updateListener.of((u) => {
@@ -260,13 +272,22 @@ export default function Editor() {
       C.attrs.reconfigure(EditorView.editorAttributes.of({
         'data-cursor': s.cursorStyle, 'data-active-line': s.activeLineStyle,
         'data-bg-effect': s.editorBgEffect, 'data-line-nums': s.lineNumberStyle,
+        'data-selection': s.selectionColor ? 'custom' : 'default',
       })),
+      C.opts.reconfigure([
+        s.wordWrap ? EditorView.lineWrapping : [],
+        s.bracketMatching ? bracketMatching() : [],
+        s.closeBrackets ? closeBrackets() : [],
+        EditorState.tabSize.of(s.tabSize), indentUnit.of(' '.repeat(s.tabSize)),
+        s.tabIndent ? tabKeys : [],
+      ]),
       C.focus.reconfigure(s.focusMode ? focusPlugin : []),
       C.tw.reconfigure(s.typewriterScroll ? [typewriter, twPad] : []),
       C.trail.reconfigure(s.cursorTrailEnabled && !touch ? trailPlugin(s.cursorTrailLength) : []),
     ] });
   }, [C, s.lineNumbers, s.lineNumberStyle, s.dark, s.cursorStyle, s.activeLineStyle, s.editorBgEffect,
-      s.focusMode, s.typewriterScroll, s.cursorTrailEnabled, s.cursorTrailLength]);
+      s.focusMode, s.typewriterScroll, s.cursorTrailEnabled, s.cursorTrailLength,
+      s.wordWrap, s.bracketMatching, s.closeBrackets, s.tabSize, s.tabIndent, s.selectionColor]);
 
   // AudioContext may only start after a user gesture
   useEffect(() => {

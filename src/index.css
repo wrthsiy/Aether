@@ -142,3 +142,8 @@ body.editing .bar-bottom { height: 1.75rem; padding-bottom: 0; } /* keyboard cov
   input[type="checkbox"] { width: 22px; height: 22px; }
   .toc button { padding: .55rem 0; }
 }
+
+/* Custom selection color (only when the user picked one; otherwise the theme's own selection style stays) */
+.cm-editor[data-selection="custom"] .cm-selectionBackground,
+.cm-editor[data-selection="custom"].cm-focused .cm-selectionBackground {
+  background: color-mix(in srgb, var(--selection-color, transparent) 55%, transparent) !important; }

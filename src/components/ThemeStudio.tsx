@@ -1,12 +1,12 @@
 import { ReactNode, useEffect, useState } from 'react';
 import { useIsPhone, useVvHeight } from '../mobile';
-import { EFFECT_DEFAULTS, EFFECT_PRESETS, PRESETS, useSettings, useStore } from '../store';
-import { BoolKey, EffectSettings, NumKey, ResolvedSettings, ThemeSettings } from '../types';
+import { EFFECT_PRESETS, PRESETS, startDefaults, useSettings, useStore } from '../store';
+import { BoolKey, NumKey, ResolvedSettings, ThemeSettings } from '../types';
 
 type P = Partial<ThemeSettings>;
 type Snap = 'peek' | 'half' | 'full';
 type ColorKey = 'bgEditor' | 'bgPreview' | 'text' | 'accent' | 'codeBg';
-type OptColorKey = 'cursorColor' | 'activeLineColor' | 'lineNumberColor' | 'cursorTrailColor';
+type OptColorKey = 'cursorColor' | 'activeLineColor' | 'lineNumberColor' | 'cursorTrailColor' | 'selectionColor';
 type SelKey = 'editorFont' | 'previewFont' | 'bgMode' | 'cursorStyle' | 'activeLineStyle' | 'lineNumberStyle' | 'editorBgEffect' | 'soundType' | 'paperType';
 const usePatch = () => useStore((s) => s.patch);
 
@@ -63,14 +63,14 @@ const Group = ({ l, k, children }: { l: string; k: BoolKey; children?: ReactNode
     </div>
   );
 };
-/** Collapsible section with a "Reset section" button that restores only its own keys. */
-const Section = ({ title, keys, children }: { title: string; keys: (keyof EffectSettings)[]; children: ReactNode }) => {
+/** Collapsible section with a "Reset section" button that restores only its own keys (phone-aware defaults). */
+const Section = ({ title, keys, defaultOpen, children }: { title: string; keys: (keyof ResolvedSettings)[]; defaultOpen?: boolean; children: ReactNode }) => {
   const patch = usePatch();
   return (
-    <details className="sec">
+    <details className="sec" open={defaultOpen}>
       <summary>{title}</summary>
       {children}
-      <button className="btn mt-2" onClick={() => patch(Object.fromEntries(keys.map((k) => [k, EFFECT_DEFAULTS[k]])) as P)}>Reset section</button>
+      <button className="btn mt-2" onClick={() => { const d = startDefaults(); patch(Object.fromEntries(keys.map((k) => [k, d[k]])) as P); }}>Reset section</button>
     </details>
   );
 };
@@ -110,14 +110,14 @@ export default function ThemeStudio() {
   };
 
   return (
-  <aside className={`studio glass no-print ${studioOpen ? 'open' : ''}`} aria-hidden={!studioOpen} aria-label="Theme Studio"
+    <aside className={`studio glass no-print ${studioOpen ? 'open' : ''}`} aria-hidden={!studioOpen} aria-label="Theme Studio"
   style={phone ? { height: H, transform: `translateY(${y}px)`, transition: dragY !== null ? 'none' : undefined,
     paddingTop: 28, paddingBottom: H - vis[snap] + 16 /* lets the hidden part of the content scroll into view */ } : undefined}>
-  <div className="sheet-handle" onPointerDown={startDrag} role="separator" aria-label="Drag to resize Theme Studio"><span /></div>
-  <div className="flex items-center justify-between">
-    <h2 className="text-lg font-bold">Theme Studio</h2>
-    <button className="btn" onClick={() => toggle('studioOpen')} aria-label="Close">✕</button>
-  </div>
+      <div className="sheet-handle" onPointerDown={startDrag} role="separator" aria-label="Drag to resize Theme Studio"><span /></div>
+      <div className="flex items-center justify-between">
+        <h2 className="text-lg font-bold">Theme Studio</h2>
+        <button className="btn" onClick={() => toggle('studioOpen')} aria-label="Close">Close</button>
+      </div>
 
       <h3>Effect presets</h3>
       <div className="flex flex-wrap gap-1">
@@ -163,16 +163,28 @@ export default function ThemeStudio() {
       <button className="btn mt-1" disabled={!s.bgImage} onClick={() => { if (s.bgImage) URL.revokeObjectURL(s.bgImage); patch({ bgImage: null }); }}>Remove background</button>
       <p className="mt-1 text-xs" style={{ color: 'var(--muted)' }}>Images last for this session only; re-add after reloading.</p>
 
-      <h3>Typography</h3>
-      <Select l="Editor font" k="editorFont" opts={['JetBrains Mono', 'Fira Code', 'IBM Plex Mono']} />
+      <h3>Preview typography</h3>
       <Select l="Preview font" k="previewFont" opts={['Inter', 'Lora', 'Merriweather']} />
-      <Range l="Font size" k="fontSize" min={14} max={20} unit="px" />
-      <Range l="Line height" k="lineHeight" min={1.2} max={2} step={0.05} />
+      <Range l="Font size" k="previewFontSize" min={14} max={20} unit="px" />
+      <Range l="Line height" k="previewLineHeight" min={1.2} max={2} step={0.05} />
       <Range l="Preview width" k="colWidth" min={600} max={1000} step={10} unit="px" />
-      <Check l="Ligatures" k="ligatures" />
 
-      <h3>Effects</h3>
-      <Section title="✍️ Editor" keys={['activeLineStyle', 'activeLineColor', 'focusMode', 'focusIntensity', 'typewriterScroll', 'lineNumberStyle', 'lineNumberColor']}>
+      <h3>Editor and effects</h3>
+      <Section title="Editor" defaultOpen keys={['editorFont', 'editorFontSize', 'editorLineHeight', 'ligatures', 'wordWrap', 'bracketMatching', 'closeBrackets', 'selectionColor', 'tabSize', 'tabIndent']}>
+        <Select l="Font" k="editorFont" opts={['JetBrains Mono', 'Fira Code', 'IBM Plex Mono']} />
+        <Range l="Font size" k="editorFontSize" min={12} max={24} unit="px" />
+        <Range l="Line height" k="editorLineHeight" min={1.2} max={2} step={0.05} />
+        <Check l="Ligatures" k="ligatures" />
+        <Check l="Word wrap" k="wordWrap" />
+        <Check l="Highlight matching brackets" k="bracketMatching" />
+        <Check l="Auto-close brackets" k="closeBrackets" />
+        <ColorOpt l="Selection color" k="selectionColor" />
+        <Range l="Tab size" k="tabSize" min={2} max={8} />
+        <Check l="Tab key indents" k="tabIndent" />
+        <p className="text-xs" style={{ color: 'var(--muted)' }}>With Tab indents on, press Esc then Tab to leave the editor.</p>
+      </Section>
+
+      <Section title="Writing aids" keys={['activeLineStyle', 'activeLineColor', 'focusMode', 'focusIntensity', 'typewriterScroll', 'lineNumbers', 'lineNumberStyle', 'lineNumberColor']}>
         <Select l="Active line" k="activeLineStyle" opts={['none', 'tint', 'border-left', 'glow']} />
         <ColorOpt l="Active line color" k="activeLineColor" />
         <Group l="Focus mode (dim other lines)" k="focusMode"><Range l="Intensity" k="focusIntensity" min={0} max={100} /></Group>
@@ -182,19 +194,19 @@ export default function ThemeStudio() {
         <ColorOpt l="Number color" k="lineNumberColor" />
       </Section>
 
-      <Section title="🎨 Editor Background" keys={['editorBgEffect', 'editorBgIntensity']}>
+      <Section title="Editor Background" keys={['editorBgEffect', 'editorBgIntensity']}>
         <Select l="Effect" k="editorBgEffect" opts={['none', 'glass', 'gradient', 'noise', 'grid', 'dots']} />
         <Range l="Intensity" k="editorBgIntensity" min={0} max={100} />
       </Section>
 
-      <Section title="🔊 Sound" keys={['soundEnabled', 'soundType', 'soundVolume']}>
+      <Section title="Sound" keys={['soundEnabled', 'soundType', 'soundVolume']}>
         <Group l="Typing sounds" k="soundEnabled">
           <Select l="Type" k="soundType" opts={['mechanical', 'typewriter', 'rain', 'soft', 'none']} />
           <Range l="Volume" k="soundVolume" min={0} max={100} />
         </Group>
       </Section>
 
-      <Section title="🌬 Motion" keys={['breathingEnabled', 'breathingSpeed', 'parallaxEnabled', 'parallaxStrength', 'ambientEnabled', 'ambientIntensity', 'hueShiftEnabled', 'hueShiftSpeed', 'frostedEdgeEnabled', 'frostedEdgeSize']}>
+      <Section title="Motion" keys={['breathingEnabled', 'breathingSpeed', 'parallaxEnabled', 'parallaxStrength', 'ambientEnabled', 'ambientIntensity', 'hueShiftEnabled', 'hueShiftSpeed', 'frostedEdgeEnabled', 'frostedEdgeSize']}>
         <Group l="Breathing" k="breathingEnabled"><Range l="Speed" k="breathingSpeed" min={3} max={8} unit="s" /></Group>
         <Group l="Parallax (mouse only)" k="parallaxEnabled"><Range l="Strength" k="parallaxStrength" min={0} max={30} unit="px" /></Group>
         <Group l="Ambient light" k="ambientEnabled"><Range l="Intensity" k="ambientIntensity" min={0} max={100} /></Group>
@@ -202,12 +214,12 @@ export default function ThemeStudio() {
         <Group l="Frosted edges" k="frostedEdgeEnabled"><Range l="Size" k="frostedEdgeSize" min={0} max={40} unit="px" /></Group>
       </Section>
 
-      <Section title="📜 Texture" keys={['paperEnabled', 'paperType', 'crtEnabled', 'crtIntensity']}>
+      <Section title="Texture" keys={['paperEnabled', 'paperType', 'crtEnabled', 'crtIntensity']}>
         <Group l="Paper" k="paperEnabled"><Select l="Type" k="paperType" opts={['aged', 'linen', 'grid', 'dotted']} /></Group>
         <Group l="CRT scanlines" k="crtEnabled"><Range l="Intensity" k="crtIntensity" min={0} max={100} /></Group>
       </Section>
 
-      <Section title="✨ Cursor" keys={['cursorStyle', 'cursorColor', 'cursorBlinkSpeed', 'cursorTrailEnabled', 'cursorTrailLength', 'cursorTrailColor']}>
+      <Section title="Cursor" keys={['cursorStyle', 'cursorColor', 'cursorBlinkSpeed', 'cursorTrailEnabled', 'cursorTrailLength', 'cursorTrailColor']}>
         <Select l="Style" k="cursorStyle" opts={['line', 'block', 'underline', 'glow', 'pulse']} />
         <ColorOpt l="Color" k="cursorColor" />
         <Range l="Blink cycle" k="cursorBlinkSpeed" min={0.5} max={2} step={0.1} unit="s" />

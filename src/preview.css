@@ -1,6 +1,6 @@
 /* Shared by the live preview AND the standalone HTML export (imported with ?raw) */
 .preview { position: relative; --line: color-mix(in srgb, var(--text) 18%, transparent);
-  font-family: var(--font-preview); font-size: var(--fs); line-height: var(--lh); color: var(--text);
+  font-family: var(--font-preview); font-size: var(--fs-preview); line-height: var(--lh-preview); color: var(--text);
   max-width: var(--col); margin: 0 auto; padding: 2rem 2.5rem; box-sizing: border-box; }
 .preview h1, .preview h2, .preview h3, .preview h4 { line-height: 1.25; margin: 1.5em 0 .5em; }
 .preview h1 { font-size: 2.1em; } .preview h2 { font-size: 1.55em; border-bottom: 1px solid var(--line); padding-bottom: .2em; }

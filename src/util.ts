@@ -20,7 +20,7 @@ export function download(name: string, text: string, type: string) {
   a.download = name; a.click(); setTimeout(() => URL.revokeObjectURL(a.href), 1000);
 }
 
-const VARS = ['--bg-editor', '--bg-preview', '--text', '--accent', '--accent-base', '--code-bg', '--font-preview', '--fs', '--lh', '--col',
+const VARS = ['--bg-editor', '--bg-preview', '--text', '--accent', '--accent-base', '--code-bg', '--font-preview', '--fs-preview', '--lh-preview', '--col',
   '--breathing-speed', '--ambient-intensity', '--hue-shift-speed', '--frosted-edge-size', '--crt-intensity'];
 /**
  * Standalone HTML: theme variables + the shared preview/effect stylesheet inlined.

@@ -19,7 +19,8 @@ function useApplyTheme() {
       '--bg-editor': s.bgEditor, '--bg-preview': s.bgPreview, '--text': s.text, '--accent': s.accent, '--accent-base': s.accent, '--code-bg': s.codeBg,
       '--font-editor': `'${s.editorFont}', ui-monospace, monospace`,
       '--font-preview': `'${s.previewFont}', ${s.previewFont === 'Inter' ? 'system-ui, sans-serif' : 'Georgia, serif'}`,
-      '--fs': `${s.fontSize}px`, '--lh': String(s.lineHeight), '--col': `${s.colWidth}px`,
+      '--fs-editor': `${s.editorFontSize}px`, '--lh-editor': String(s.editorLineHeight),
+      '--fs-preview': `${s.previewFontSize}px`, '--lh-preview': String(s.previewLineHeight), '--col': `${s.colWidth}px`,
       '--lig': s.ligatures ? 'normal' : 'none', '--feat': s.ligatures ? '"liga" 1, "calt" 1' : '"liga" 0, "calt" 0',
       '--cursor-style': s.cursorStyle, '--cursor-blink': `${s.cursorBlinkSpeed}s`,
       '--active-line-style': s.activeLineStyle,
@@ -35,7 +36,7 @@ function useApplyTheme() {
     // Optional colors: unset → CSS falls back to var(--accent) at the point of use (so hue-shift reaches them)
     const opt: Record<string, string> = {
       '--cursor-color': s.cursorColor, '--active-line-color': s.activeLineColor,
-      '--line-number-color': s.lineNumberColor, '--trail-color': s.cursorTrailColor,
+      '--line-number-color': s.lineNumberColor, '--trail-color': s.cursorTrailColor, '--selection-color': s.selectionColor,
     };
     Object.entries(opt).forEach(([k, val]) => (val ? r.style.setProperty(k, val) : r.style.removeProperty(k)));
     r.classList.toggle('dark', s.dark);

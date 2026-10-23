@@ -2,7 +2,7 @@ import { useMemo } from 'react';
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import { get, set } from 'idb-keyval';
-import { EffectSettings, Mode, ResolvedSettings, ThemeSettings } from './types';
+import { EditorSettings, EffectSettings, Mode, ResolvedSettings, ThemeSettings } from './types';
 
 export const PALETTES = {
   dark: { bgEditor: '#14161f', bgPreview: '#1b1e2b', text: '#e6e8f0', accent: '#8b7cff', codeBg: '#0e1018' },
@@ -25,12 +25,18 @@ export const EFFECT_DEFAULTS: Required<EffectSettings> = {
   paperEnabled: false, paperType: 'aged',
   crtEnabled: false, crtIntensity: 40,
 };
+/** Editor options. Kept out of EFFECT_DEFAULTS so applying an effect preset never resets them. */
+export const EDITOR_DEFAULTS: Required<EditorSettings> = {
+  wordWrap: true, bracketMatching: false, closeBrackets: false, selectionColor: '', tabSize: 2, tabIndent: false,
+};
 export const DEFAULTS: ResolvedSettings = {
   dark: true, ...PALETTES.dark,
   gradient: { enabled: false, type: 'linear', angle: 135, stops: ['#ff7e5f', '#feb47b'] },
   bgImage: null, blur: 0, darken: 30, saturate: 100, bgMode: 'cover',
-  editorFont: 'JetBrains Mono', previewFont: 'Inter', fontSize: 16, lineHeight: 1.6, colWidth: 760,
+  editorFont: 'JetBrains Mono', previewFont: 'Inter',
+  editorFontSize: 16, editorLineHeight: 1.6, previewFontSize: 16, previewLineHeight: 1.6, colWidth: 760,
   ligatures: true, lineNumbers: true,
+  ...EDITOR_DEFAULTS,
   ...EFFECT_DEFAULTS,
 };
 export const PRESETS: Record<string, string[]> = {
@@ -49,7 +55,15 @@ export const PHONE_Q = '(max-width: 768px), (pointer: coarse) and (max-height: 5
 export const isPhone = () => typeof matchMedia !== 'undefined' && matchMedia(PHONE_Q).matches;
 /** First-launch values on phones (and "Reset to defaults" there). Saved settings are never overridden. */
 export const startDefaults = (): ResolvedSettings =>
-  isPhone() ? { ...DEFAULTS, fontSize: 17, lineNumbers: false, typewriterScroll: true } : DEFAULTS;
+  isPhone() ? { ...DEFAULTS, editorFontSize: 17, previewFontSize: 17, lineNumbers: false, typewriterScroll: true } : DEFAULTS;
+
+/** Old saves had one fontSize / lineHeight for both panes: copy them into the new editor + preview pairs, drop the old keys. */
+const migrate = (saved: any) => {
+  const { fontSize, lineHeight, ...rest } = saved;
+  if (fontSize !== undefined) { rest.editorFontSize ??= fontSize; rest.previewFontSize ??= fontSize; }
+  if (lineHeight !== undefined) { rest.editorLineHeight ??= lineHeight; rest.previewLineHeight ??= lineHeight; }
+  return rest;
+};
 
 interface State {
   settings: ThemeSettings; mode: Mode; studioOpen: boolean; tocOpen: boolean; content: string; savedAt: number;
@@ -74,7 +88,7 @@ export const useStore = create<State>()(
       name: 'aether-settings',
       partialize: (s) => ({ settings: { ...s.settings, bgImage: null }, mode: s.mode === 'zen' ? 'split' : s.mode }),
       // nothing saved yet (first launch) → keep the initial, possibly phone-tuned, settings
-      merge: (p, c) => ({ ...c, ...(p as object), settings: (p as any)?.settings ? { ...DEFAULTS, ...(p as any).settings } : c.settings }),
+      merge: (p, c) => ({ ...c, ...(p as object), settings: (p as any)?.settings ? { ...DEFAULTS, ...migrate((p as any).settings) } : c.settings }),
     }
   )
 );

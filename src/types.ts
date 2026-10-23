@@ -24,13 +24,23 @@ export interface EffectSettings {
   paperEnabled?: boolean; paperType?: PaperType;
   crtEnabled?: boolean; crtIntensity?: number;
 }
-export interface ThemeSettings extends EffectSettings {
+/** Editor behaviour options (optional → older saved settings still load; defaults in EDITOR_DEFAULTS). */
+export interface EditorSettings {
+  wordWrap?: boolean;
+  bracketMatching?: boolean;
+  closeBrackets?: boolean;
+  selectionColor?: string;   // '' = theme default
+  tabSize?: number;          // 2–8
+  tabIndent?: boolean;       // Tab key indents (Esc, then Tab, leaves the editor)
+}
+export interface ThemeSettings extends EffectSettings, EditorSettings {
   dark: boolean;
   bgEditor: string; bgPreview: string; text: string; accent: string; codeBg: string;
   gradient: GradientSettings;
   bgImage: string | null; // ObjectURL – session only, never persisted
   blur: number; darken: number; saturate: number; bgMode: 'cover' | 'contain' | 'tile';
-  editorFont: string; previewFont: string; fontSize: number; lineHeight: number; colWidth: number;
+  editorFont: string; previewFont: string;
+  editorFontSize: number; editorLineHeight: number; previewFontSize: number; previewLineHeight: number; colWidth: number;
   ligatures: boolean; lineNumbers: boolean;
 }
 export type ResolvedSettings = Required<ThemeSettings>;
