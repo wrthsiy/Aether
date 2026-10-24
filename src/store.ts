@@ -2,7 +2,7 @@ import { useMemo } from 'react';
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import { get, set } from 'idb-keyval';
-import { EditorSettings, EffectSettings, Mode, ResolvedSettings, ThemeSettings } from './types';
+import { EditorSettings, EffectSettings, Mode, PreviewSettings, ResolvedSettings, ThemeSettings } from './types';
 
 export const PALETTES = {
   dark: { bgEditor: '#14161f', bgPreview: '#1b1e2b', text: '#e6e8f0', accent: '#8b7cff', codeBg: '#0e1018' },
@@ -29,6 +29,11 @@ export const EFFECT_DEFAULTS: Required<EffectSettings> = {
 export const EDITOR_DEFAULTS: Required<EditorSettings> = {
   wordWrap: true, bracketMatching: false, closeBrackets: false, selectionColor: '', tabSize: 2, tabIndent: false,
 };
+/** Preview options. Separate from EFFECT_DEFAULTS so effect presets never reset them. Defaults reproduce the old look. */
+export const PREVIEW_DEFAULTS: Required<PreviewSettings> = {
+  paragraphSpacing: 1, letterSpacing: 0, headingScale: 1.25, blockquoteStyle: 'bar', linkStyle: 'underline',
+  tableStyle: 'bordered', imageRadius: 10, imageShadow: false, codeTheme: 'auto',
+};
 export const DEFAULTS: ResolvedSettings = {
   dark: true, ...PALETTES.dark,
   gradient: { enabled: false, type: 'linear', angle: 135, stops: ['#ff7e5f', '#feb47b'] },
@@ -37,15 +42,18 @@ export const DEFAULTS: ResolvedSettings = {
   editorFontSize: 16, editorLineHeight: 1.6, previewFontSize: 16, previewLineHeight: 1.6, colWidth: 760,
   ligatures: true, lineNumbers: true,
   ...EDITOR_DEFAULTS,
+  ...PREVIEW_DEFAULTS,
+  exportCompress: true,
   ...EFFECT_DEFAULTS,
 };
 export const PRESETS: Record<string, string[]> = {
   Sunset: ['#ff5f6d', '#ffc371'], Ocean: ['#2193b0', '#6dd5ed', '#1c3b70'],
   Aurora: ['#00c9a7', '#845ec2', '#ff6f91'], Midnight: ['#0f2027', '#203a43', '#2c5364'],
 };
-export const EFFECT_PRESETS: Record<string, Partial<EffectSettings>> = {
-  Writer: { focusMode: true, typewriterScroll: true, cursorStyle: 'glow', paperEnabled: true, paperType: 'aged' },
-  Retro: { crtEnabled: true, crtIntensity: 55, paperEnabled: true, paperType: 'aged', hueShiftEnabled: true },
+// Presets only override the keys they name (preview keys included); everything else is left as the user set it
+export const EFFECT_PRESETS: Record<string, Partial<ThemeSettings>> = {
+  Writer: { focusMode: true, typewriterScroll: true, cursorStyle: 'glow', paperEnabled: true, paperType: 'aged', previewLineHeight: 1.8, paragraphSpacing: 1.2 },
+  Retro: { crtEnabled: true, crtIntensity: 55, paperEnabled: true, paperType: 'aged', hueShiftEnabled: true, codeTheme: 'solarized' },
   Ambient: { ambientEnabled: true, breathingEnabled: true, parallaxEnabled: true },
   Focus: { frostedEdgeEnabled: true, focusMode: true, typewriterScroll: true },
 };

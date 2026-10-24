@@ -21,6 +21,10 @@ function useApplyTheme() {
       '--font-preview': `'${s.previewFont}', ${s.previewFont === 'Inter' ? 'system-ui, sans-serif' : 'Georgia, serif'}`,
       '--fs-editor': `${s.editorFontSize}px`, '--lh-editor': String(s.editorLineHeight),
       '--fs-preview': `${s.previewFontSize}px`, '--lh-preview': String(s.previewLineHeight), '--col': `${s.colWidth}px`,
+      '--p-space': `${s.paragraphSpacing}em`, '--letter': `${s.letterSpacing}em`, '--img-radius': `${s.imageRadius}px`,
+      // one ratio → heading sizes (exponents chosen so 1.25 matches the previous fixed sizes)
+      '--h1-size': `${(s.headingScale ** 3.4).toFixed(3)}em`, '--h2-size': `${(s.headingScale ** 2).toFixed(3)}em`,
+      '--h3-size': `${s.headingScale.toFixed(3)}em`, '--h4-size': `${(s.headingScale ** 0.5).toFixed(3)}em`,
       '--lig': s.ligatures ? 'normal' : 'none', '--feat': s.ligatures ? '"liga" 1, "calt" 1' : '"liga" 0, "calt" 0',
       '--cursor-style': s.cursorStyle, '--cursor-blink': `${s.cursorBlinkSpeed}s`,
       '--active-line-style': s.activeLineStyle,

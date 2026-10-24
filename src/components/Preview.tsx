@@ -1,7 +1,7 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, type CSSProperties } from 'react';
 import { useStore, useSettings } from '../store';
 import { md } from '../md';
-import { gradientCss } from '../util';
+import { bgVars, previewAttrs } from '../util';
 import TOC from './TOC';
 
 export default function Preview() {
@@ -29,24 +29,17 @@ export default function Preview() {
   };
 
   const decorated = s.gradient.enabled || !!s.bgImage;
+  // Same structure + same preview.css rules as the exported HTML; background values arrive as CSS variables (see bgVars in util.ts)
   return (
-    <div className="pp preview-wrap relative h-full overflow-hidden" style={{ background: 'var(--bg-preview)' }}>
-      {/* .bg-stack gets the parallax transform (see index.css); layers inside keep their own filters */}
-      <div className="bg-stack absolute inset-0">
-        {s.gradient.enabled && <div className="bg-layer absolute inset-0" style={{ background: gradientCss(s.gradient) }} />}
-        {s.bgImage && (
-          <div className="bg-layer absolute" style={{
-            inset: -s.blur * 2, backgroundImage: `url(${s.bgImage})`, backgroundPosition: 'center',
-            backgroundSize: s.bgMode === 'tile' ? 'auto' : s.bgMode, backgroundRepeat: s.bgMode === 'tile' ? 'repeat' : 'no-repeat',
-            filter: `blur(${s.blur}px) saturate(${s.saturate}%)`,
-          }} />
-        )}
-        {decorated && <div className="bg-layer absolute inset-0" style={{ background: `rgba(0,0,0,${s.darken / 100})` }} />}
+    <div className="pp preview-wrap" style={bgVars(s, s.bgImage) as unknown as CSSProperties}>
+      <div className="bg-stack">
+        {s.gradient.enabled && <div className="bg-layer bg-gradient" />}
+        {s.bgImage && <div className="bg-layer bg-image" />}
+        {decorated && <div className="bg-layer bg-dark" />}
       </div>
-      <div className="scroll-area pp absolute inset-0 overflow-auto p-0 md:p-4">
-        <article className={`preview print-area ${decorated ? 'glass rounded-2xl' : ''}`} onClick={onClick}
-          data-paper={s.paperEnabled ? s.paperType : undefined} data-crt={s.crtEnabled ? 'on' : undefined}
-          dangerouslySetInnerHTML={{ __html: html }} />
+      <div className="scroll-area pp">
+        <article className={`preview print-area ${decorated ? 'glass' : ''}`} onClick={onClick}
+          {...previewAttrs(s)} dangerouslySetInnerHTML={{ __html: html }} />
       </div>
       {tocOpen && <TOC />}
     </div>

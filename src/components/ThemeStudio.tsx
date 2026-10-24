@@ -7,7 +7,7 @@ type P = Partial<ThemeSettings>;
 type Snap = 'peek' | 'half' | 'full';
 type ColorKey = 'bgEditor' | 'bgPreview' | 'text' | 'accent' | 'codeBg';
 type OptColorKey = 'cursorColor' | 'activeLineColor' | 'lineNumberColor' | 'cursorTrailColor' | 'selectionColor';
-type SelKey = 'editorFont' | 'previewFont' | 'bgMode' | 'cursorStyle' | 'activeLineStyle' | 'lineNumberStyle' | 'editorBgEffect' | 'soundType' | 'paperType';
+type SelKey = 'editorFont' | 'previewFont' | 'bgMode' | 'blockquoteStyle' | 'linkStyle' | 'tableStyle' | 'codeTheme' | 'cursorStyle' | 'activeLineStyle' | 'lineNumberStyle' | 'editorBgEffect' | 'soundType' | 'paperType';
 const usePatch = () => useStore((s) => s.patch);
 
 const Row = ({ l, children }: { l: string; children: ReactNode }) => (
@@ -111,8 +111,8 @@ export default function ThemeStudio() {
 
   return (
     <aside className={`studio glass no-print ${studioOpen ? 'open' : ''}`} aria-hidden={!studioOpen} aria-label="Theme Studio"
-  style={phone ? { height: H, transform: `translateY(${y}px)`, transition: dragY !== null ? 'none' : undefined,
-    paddingTop: 28, paddingBottom: H - vis[snap] + 16 /* lets the hidden part of the content scroll into view */ } : undefined}>
+      style={phone ? { height: H, transform: `translateY(${y}px)`, transition: dragY !== null ? 'none' : undefined,
+        paddingTop: 28, paddingBottom: H - vis[snap] + 16 /* lets the hidden part of the content scroll into view */ } : undefined}>
       <div className="sheet-handle" onPointerDown={startDrag} role="separator" aria-label="Drag to resize Theme Studio"><span /></div>
       <div className="flex items-center justify-between">
         <h2 className="text-lg font-bold">Theme Studio</h2>
@@ -163,13 +163,7 @@ export default function ThemeStudio() {
       <button className="btn mt-1" disabled={!s.bgImage} onClick={() => { if (s.bgImage) URL.revokeObjectURL(s.bgImage); patch({ bgImage: null }); }}>Remove background</button>
       <p className="mt-1 text-xs" style={{ color: 'var(--muted)' }}>Images last for this session only; re-add after reloading.</p>
 
-      <h3>Preview typography</h3>
-      <Select l="Preview font" k="previewFont" opts={['Inter', 'Lora', 'Merriweather']} />
-      <Range l="Font size" k="previewFontSize" min={14} max={20} unit="px" />
-      <Range l="Line height" k="previewLineHeight" min={1.2} max={2} step={0.05} />
-      <Range l="Preview width" k="colWidth" min={600} max={1000} step={10} unit="px" />
-
-      <h3>Editor and effects</h3>
+      <h3>Editor, preview and effects</h3>
       <Section title="Editor" defaultOpen keys={['editorFont', 'editorFontSize', 'editorLineHeight', 'ligatures', 'wordWrap', 'bracketMatching', 'closeBrackets', 'selectionColor', 'tabSize', 'tabIndent']}>
         <Select l="Font" k="editorFont" opts={['JetBrains Mono', 'Fira Code', 'IBM Plex Mono']} />
         <Range l="Font size" k="editorFontSize" min={12} max={24} unit="px" />
@@ -182,6 +176,22 @@ export default function ThemeStudio() {
         <Range l="Tab size" k="tabSize" min={2} max={8} />
         <Check l="Tab key indents" k="tabIndent" />
         <p className="text-xs" style={{ color: 'var(--muted)' }}>With Tab indents on, press Esc then Tab to leave the editor.</p>
+      </Section>
+
+      <Section title="Preview" defaultOpen keys={['previewFont', 'previewFontSize', 'previewLineHeight', 'colWidth', 'paragraphSpacing', 'letterSpacing', 'headingScale', 'blockquoteStyle', 'linkStyle', 'tableStyle', 'codeTheme', 'imageRadius', 'imageShadow']}>
+        <Select l="Font" k="previewFont" opts={['Inter', 'Lora', 'Merriweather']} />
+        <Range l="Font size" k="previewFontSize" min={14} max={20} unit="px" />
+        <Range l="Line height" k="previewLineHeight" min={1.2} max={2} step={0.05} />
+        <Range l="Width" k="colWidth" min={600} max={1000} step={10} unit="px" />
+        <Range l="Paragraph spacing" k="paragraphSpacing" min={0.4} max={2} step={0.1} unit="em" />
+        <Range l="Letter spacing" k="letterSpacing" min={-0.02} max={0.1} step={0.005} unit="em" />
+        <Range l="Heading scale" k="headingScale" min={1.1} max={1.5} step={0.05} />
+        <Select l="Blockquotes" k="blockquoteStyle" opts={['bar', 'card', 'quote', 'minimal']} />
+        <Select l="Links" k="linkStyle" opts={['underline', 'animated', 'highlight', 'none']} />
+        <Select l="Tables" k="tableStyle" opts={['plain', 'striped', 'bordered', 'minimal']} />
+        <Select l="Code theme" k="codeTheme" opts={['auto', 'one-dark', 'github-light', 'dracula', 'solarized', 'nord']} />
+        <Range l="Image radius" k="imageRadius" min={0} max={32} unit="px" />
+        <Check l="Image shadow" k="imageShadow" />
       </Section>
 
       <Section title="Writing aids" keys={['activeLineStyle', 'activeLineColor', 'focusMode', 'focusIntensity', 'typewriterScroll', 'lineNumbers', 'lineNumberStyle', 'lineNumberColor']}>

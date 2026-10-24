@@ -9,13 +9,14 @@ const MODES: [Mode, string][] = [['focus', 'Focus'], ['split', 'Split'], ['previ
 const PHONE_MODES: [Mode, string][] = [['focus', 'Edit'], ['preview', 'Preview'], ['zen', 'Zen']];
 
 export default function Toolbar() {
-  const { mode, setMode, toggle, studioOpen, tocOpen, content, toggleDark } = useStore();
+  const { mode, setMode, toggle, studioOpen, tocOpen, content, toggleDark, patch } = useStore();
   const settings = useStore((s) => s.settings);
   const [menu, setMenu] = useState(false);
   const [msg, setMsg] = useState('');
   const phone = useIsPhone(), sw = useBarSwipe();
   const menuRef = useRef<HTMLDivElement>(null);
-  const flash = (m: string) => { setMsg(m); setTimeout(() => setMsg(''), 2200); };
+  const flash = (m: string, ms = 2200) => { setMsg(m); setTimeout(() => setMsg(''), ms); };
+  const compress = settings.exportCompress ?? true;
 
   // phone "more" menu: close on outside tap
   useEffect(() => {
@@ -29,6 +30,17 @@ export default function Toolbar() {
     const url = `${location.origin}${location.pathname}#c=${b64encode(content)}`;
     await navigator.clipboard.writeText(url);
     flash(url.length > 100000 ? 'Link copied (very long – may not open everywhere)' : 'Link copied');
+  };
+  const exportHtml = async () => {
+    setMenu(false); flash('Preparing export…', 15000);
+    try {
+      const r = await buildHtml(content, settings, { compress });
+      download('aether.html', r.html, 'text/html');
+      const mb = r.bytes / 1048576;
+      if (r.bgFailed) flash('Exported, but the background image could not be embedded', 6000);
+      else if (mb > 10) flash(`Exported ${mb.toFixed(1)} MB: large file${compress ? '' : ', try Compress images'}`, 6000);
+      else flash(`Exported (${mb.toFixed(1)} MB)`);
+    } catch { flash('Export failed', 4000); }
   };
   const pdf = () => {
     // The print stylesheet only shows the preview, so make sure it is mounted first
@@ -60,7 +72,8 @@ export default function Toolbar() {
                 {item(tocOpen ? 'Hide contents' : 'Table of contents', () => toggle('tocOpen'))}
                 {item(settings.dark ? 'Light theme' : 'Dark theme', toggleDark)}
                 {item('Download .md', () => download('aether.md', content, 'text/markdown'))}
-                {item('Download .html', () => download('aether.html', buildHtml(content, settings), 'text/html'))}
+                {item('Download .html', exportHtml)}
+                {item(`Compress images: ${compress ? 'on' : 'off'}`, () => patch({ exportCompress: !compress }))}
                 {item('Print to PDF', pdf)}
               </div>
             )}
@@ -88,7 +101,8 @@ export default function Toolbar() {
           {menu && (
             <div className="glass fade-in absolute right-0 top-9 flex w-40 flex-col gap-1 rounded-xl p-2">
               <button className="btn" onClick={() => { download('aether.md', content, 'text/markdown'); setMenu(false); }}>Download .md</button>
-              <button className="btn" onClick={() => { download('aether.html', buildHtml(content, settings), 'text/html'); setMenu(false); }}>Download .html</button>
+              <button className="btn" onClick={exportHtml}>Download .html</button>
+              <label className="flex items-center gap-2 px-1 text-xs"><input type="checkbox" checked={compress} style={{ accentColor: 'var(--accent)' }} onChange={(e) => patch({ exportCompress: e.target.checked })} />Compress images</label>
               <button className="btn" onClick={pdf}>Print to PDF</button>
             </div>
           )}

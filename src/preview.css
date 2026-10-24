@@ -3,15 +3,15 @@
   font-family: var(--font-preview); font-size: var(--fs-preview); line-height: var(--lh-preview); color: var(--text);
   max-width: var(--col); margin: 0 auto; padding: 2rem 2.5rem; box-sizing: border-box; }
 .preview h1, .preview h2, .preview h3, .preview h4 { line-height: 1.25; margin: 1.5em 0 .5em; }
-.preview h1 { font-size: 2.1em; } .preview h2 { font-size: 1.55em; border-bottom: 1px solid var(--line); padding-bottom: .2em; }
-.preview h3 { font-size: 1.25em; }
+.preview h1 { font-size: var(--h1-size, 2.1em); } .preview h2 { font-size: var(--h2-size, 1.55em); border-bottom: 1px solid var(--line); padding-bottom: .2em; }
+.preview h3 { font-size: var(--h3-size, 1.25em); } .preview h4 { font-size: var(--h4-size, 1.1em); }
 .preview a { color: var(--accent); }
 .preview blockquote { margin: 1em 0; padding: .3em 1em; border-left: 4px solid var(--accent);
   background: color-mix(in srgb, var(--accent) 10%, transparent); border-radius: 0 10px 10px 0; }
 .preview table { border-collapse: collapse; width: 100%; margin: 1em 0; }
 .preview th, .preview td { border: 1px solid var(--line); padding: .45em .8em; }
 .preview th { background: color-mix(in srgb, var(--accent) 12%, transparent); }
-.preview code { font-family: 'JetBrains Mono', ui-monospace, monospace; font-size: .88em; }
+.preview code { font-family: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: .88em; letter-spacing: 0; }
 .preview :not(pre) > code { background: var(--code-bg); padding: .15em .4em; border-radius: 6px; }
 .preview pre.hljs { position: relative; background: var(--code-bg); padding: 1em 1.1em; border-radius: 12px; overflow: auto; }
 .preview .copy-btn { position: absolute; top: 8px; right: 8px; opacity: 0; transition: opacity .15s; cursor: pointer;
@@ -21,12 +21,13 @@
 .preview ul.contains-task-list { padding-left: 0; } .preview .task-list-item { list-style: none; }
 .preview .task-list-item-checkbox { accent-color: var(--accent); margin-right: .5em; cursor: pointer; }
 .preview .footnotes { font-size: .85em; border-top: 1px solid var(--line); margin-top: 2em; }
-.preview .hljs-keyword, .preview .hljs-built_in, .preview .hljs-selector-tag { color: #c678dd; }
-.preview .hljs-string, .preview .hljs-attr, .preview .hljs-template-variable { color: #7fc77f; }
-.preview .hljs-number, .preview .hljs-literal { color: #e5a05b; }
-.preview .hljs-title, .preview .hljs-function { color: #61afef; }
-.preview .hljs-comment { color: #7d8799; font-style: italic; }
-.preview .hljs-type, .preview .hljs-class { color: #e6c07b; }
+.preview pre.hljs, .preview :not(pre) > code { color: var(--code-fg, inherit); }
+.preview .hljs-keyword, .preview .hljs-built_in, .preview .hljs-selector-tag { color: var(--hl-keyword, #c678dd); }
+.preview .hljs-string, .preview .hljs-attr, .preview .hljs-template-variable { color: var(--hl-string, #7fc77f); }
+.preview .hljs-number, .preview .hljs-literal { color: var(--hl-number, #e5a05b); }
+.preview .hljs-title, .preview .hljs-function { color: var(--hl-title, #61afef); }
+.preview .hljs-comment { color: var(--hl-comment, #7d8799); font-style: italic; }
+.preview .hljs-type, .preview .hljs-class { color: var(--hl-type, #e6c07b); }
 @media (max-width: 640px) { .preview { padding: 1.2rem; } }
 
 /* ================= Shared effects (live preview AND exported HTML) ================= */
@@ -51,12 +52,11 @@ body.ambient::before { content: ''; position: fixed; inset: 0; z-index: 25; poin
     radial-gradient(circle at 100% 0, color-mix(in srgb, var(--accent) calc(var(--ambient-intensity, .5) * 25%), transparent), transparent 35%); }
 
 /* Frosted edges: a blur layer masked to the border (editor, preview pane, or whole page in the export) */
-body.frosted-edge .cm-editor::after, body.frosted-edge .preview-wrap::after, body.frosted-edge.export::after {
+body.frosted-edge .cm-editor::after, body.frosted-edge .preview-wrap::after {
   content: ''; position: absolute; inset: 0; z-index: 4; pointer-events: none;
   backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px);
   -webkit-mask-image: linear-gradient(to bottom, #000, transparent var(--frosted-edge-size, 16px)), linear-gradient(to top, #000, transparent var(--frosted-edge-size, 16px)), linear-gradient(to right, #000, transparent var(--frosted-edge-size, 16px)), linear-gradient(to left, #000, transparent var(--frosted-edge-size, 16px));
   mask-image: linear-gradient(to bottom, #000, transparent var(--frosted-edge-size, 16px)), linear-gradient(to top, #000, transparent var(--frosted-edge-size, 16px)), linear-gradient(to right, #000, transparent var(--frosted-edge-size, 16px)), linear-gradient(to left, #000, transparent var(--frosted-edge-size, 16px)); }
-body.frosted-edge.export::after { position: fixed; }
 
 /* Paper textures (SVG data-URIs). Overlay never blocks clicks. */
 .preview[data-paper]::before { content: ''; position: absolute; inset: 0; z-index: 1; pointer-events: none; mix-blend-mode: multiply; border-radius: inherit; }
@@ -79,6 +79,67 @@ body.crt .preview { text-shadow: 0 0 calc(var(--crt-intensity, .4) * 5px) color-
 @media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation: none !important; transition: none !important; } }
 /* Print / PDF: all effects off */
 @media print {
+  html, body { background: #fff !important; }
+  .preview-wrap, .scroll-area { position: static !important; height: auto !important; overflow: visible !important; display: block !important; }
+  .bg-stack { display: none !important; }
+  .preview { background: #fff !important; color: #000 !important; backdrop-filter: none !important; border: 0 !important; }
   body::before, body::after, .preview::before, .preview::after, .preview-wrap::after { display: none !important; }
   body, body *, .preview { animation: none !important; text-shadow: none !important; }
 }
+
+/* ================= Layout: shared by the live preview and the exported HTML ================= */
+.preview-wrap { position: relative; height: 100%; overflow: hidden; background: var(--bg-preview); }
+.bg-stack { position: absolute; inset: 0; pointer-events: none; }
+.bg-layer { position: absolute; inset: 0; }
+.bg-gradient { background: var(--bg-gradient); }
+.bg-image { inset: calc(var(--bg-blur, 0px) * -2); background-image: var(--bg-image); background-position: center;
+  background-size: var(--bg-size, cover); background-repeat: var(--bg-repeat, no-repeat);
+  filter: blur(var(--bg-blur, 0px)) saturate(var(--bg-saturate, 100%)); }
+.bg-dark { background: rgba(0, 0, 0, var(--bg-darken, .3)); }
+.scroll-area { position: absolute; inset: 0; overflow: auto; padding: 0; }
+@media (min-width: 768px) { .scroll-area { padding: 1rem; } }
+.preview.glass { background: color-mix(in srgb, var(--bg-preview) 62%, transparent); backdrop-filter: blur(16px) saturate(140%); -webkit-backdrop-filter: blur(16px) saturate(140%);
+  border: 1px solid color-mix(in srgb, var(--text) 12%, transparent); border-radius: 1rem; }
+/* Parallax (mouse only; --px/--py are set by App.tsx live, by the inline script in the export) */
+@media (hover: hover) and (pointer: fine) {
+  body.parallax .bg-stack { transform: translate3d(calc(var(--px, 0) * var(--parallax-strength, 12px) * -1), calc(var(--py, 0) * var(--parallax-strength, 12px) * -1), 0) scale(1.1); transition: transform .25s ease-out; }
+}
+/* No hover on touch screens: keep the Copy button visible */
+@media (hover: none) { .preview .copy-btn { opacity: .8; } }
+
+/* ================= Preview customization (driven by data-* attributes on .preview) ================= */
+.preview { letter-spacing: var(--letter, 0); }
+.preview > :is(p, ul, ol, blockquote, pre, table) { margin-block: var(--p-space, 1em); }
+.preview img { border-radius: var(--img-radius, 10px); }
+.preview[data-img-shadow="on"] img { box-shadow: 0 8px 28px rgba(0, 0, 0, .28); }
+
+/* Blockquotes ("bar" is the original look) */
+.preview[data-quote="card"] blockquote { border: 1px solid var(--line); border-radius: 12px; padding: .8em 1.2em;
+  background: color-mix(in srgb, var(--text) 5%, transparent); box-shadow: 0 2px 10px rgba(0, 0, 0, .12); }
+.preview[data-quote="quote"] blockquote { position: relative; border: 0; background: none; border-radius: 0; padding: .2em 1em .2em 2.6em; font-style: italic; }
+.preview[data-quote="quote"] blockquote::before { content: '\201C'; position: absolute; left: .25em; top: -.15em; font-size: 3em; line-height: 1; color: var(--accent); font-style: normal; }
+.preview[data-quote="minimal"] blockquote { border-left: 2px solid var(--line); background: none; border-radius: 0; padding: .1em 1em; color: color-mix(in srgb, var(--text) 78%, transparent); }
+
+/* Links */
+.preview[data-link="animated"] a { text-decoration: none; background-repeat: no-repeat; background-position: 0 100%, 0 100%; transition: background-size .25s ease;
+  background-image: linear-gradient(currentColor, currentColor), linear-gradient(color-mix(in srgb, currentColor 35%, transparent), color-mix(in srgb, currentColor 35%, transparent));
+  background-size: 0 2px, 100% 1px; }
+.preview[data-link="animated"] a:hover, .preview[data-link="animated"] a:focus-visible { background-size: 100% 2px, 100% 1px; }
+.preview[data-link="highlight"] a { text-decoration: none; padding: 0 .2em; border-radius: 4px; background: color-mix(in srgb, var(--accent) 22%, transparent); }
+.preview[data-link="highlight"] a:hover { background: color-mix(in srgb, var(--accent) 38%, transparent); }
+.preview[data-link="none"] a { text-decoration: none; }
+
+/* Tables ("bordered" is the original look) */
+.preview[data-table="plain"] th, .preview[data-table="plain"] td { border: 0; }
+.preview[data-table="plain"] th { background: none; }
+.preview[data-table="striped"] th, .preview[data-table="striped"] td { border: 0; }
+.preview[data-table="striped"] tbody tr:nth-child(even) { background: color-mix(in srgb, var(--text) 6%, transparent); }
+.preview[data-table="minimal"] th, .preview[data-table="minimal"] td { border: 0; border-bottom: 1px solid var(--line); }
+.preview[data-table="minimal"] th { background: none; border-bottom-width: 2px; }
+
+/* Code themes ("auto" = original token colors + the Code block background picker) */
+.preview[data-code="one-dark"] { --code-bg: #282c34; --code-fg: #abb2bf; --hl-keyword: #c678dd; --hl-string: #98c379; --hl-number: #d19a66; --hl-title: #61afef; --hl-comment: #7f848e; --hl-type: #e5c07b; }
+.preview[data-code="github-light"] { --code-bg: #f6f8fa; --code-fg: #24292f; --hl-keyword: #cf222e; --hl-string: #0a3069; --hl-number: #0550ae; --hl-title: #8250df; --hl-comment: #6e7781; --hl-type: #953800; }
+.preview[data-code="dracula"] { --code-bg: #282a36; --code-fg: #f8f8f2; --hl-keyword: #ff79c6; --hl-string: #f1fa8c; --hl-number: #bd93f9; --hl-title: #50fa7b; --hl-comment: #6272a4; --hl-type: #8be9fd; }
+.preview[data-code="solarized"] { --code-bg: #002b36; --code-fg: #839496; --hl-keyword: #859900; --hl-string: #2aa198; --hl-number: #d33682; --hl-title: #268bd2; --hl-comment: #586e75; --hl-type: #b58900; }
+.preview[data-code="nord"] { --code-bg: #2e3440; --code-fg: #d8dee9; --hl-keyword: #81a1c1; --hl-string: #a3be8c; --hl-number: #b48ead; --hl-title: #88c0d0; --hl-comment: #616e88; --hl-type: #8fbcbb; }

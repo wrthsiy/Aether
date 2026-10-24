@@ -6,6 +6,10 @@ export type LineNumberStyle = 'plain' | 'dotted' | 'roman' | 'hidden';
 export type EditorBgEffect = 'none' | 'glass' | 'gradient' | 'noise' | 'grid' | 'dots';
 export type SoundType = 'mechanical' | 'typewriter' | 'rain' | 'soft' | 'none';
 export type PaperType = 'aged' | 'linen' | 'grid' | 'dotted';
+export type BlockquoteStyle = 'bar' | 'card' | 'quote' | 'minimal';
+export type LinkStyle = 'underline' | 'animated' | 'highlight' | 'none';
+export type TableStyle = 'plain' | 'striped' | 'bordered' | 'minimal';
+export type CodeTheme = 'auto' | 'one-dark' | 'github-light' | 'dracula' | 'solarized' | 'nord';
 
 /** All optional → settings saved by older versions still load. Empty-string colors = follow accent. */
 export interface EffectSettings {
@@ -24,6 +28,18 @@ export interface EffectSettings {
   paperEnabled?: boolean; paperType?: PaperType;
   crtEnabled?: boolean; crtIntensity?: number;
 }
+/** Preview look. Optional → older saved settings still load; defaults in PREVIEW_DEFAULTS. */
+export interface PreviewSettings {
+  paragraphSpacing?: number;  // em, gap between blocks
+  letterSpacing?: number;     // em
+  headingScale?: number;      // ratio 1.1–1.5; h1–h4 sizes are derived from it
+  blockquoteStyle?: BlockquoteStyle;
+  linkStyle?: LinkStyle;
+  tableStyle?: TableStyle;
+  imageRadius?: number;       // px
+  imageShadow?: boolean;
+  codeTheme?: CodeTheme;      // 'auto' = original colors + the code background picker
+}
 /** Editor behaviour options (optional → older saved settings still load; defaults in EDITOR_DEFAULTS). */
 export interface EditorSettings {
   wordWrap?: boolean;
@@ -33,7 +49,7 @@ export interface EditorSettings {
   tabSize?: number;          // 2–8
   tabIndent?: boolean;       // Tab key indents (Esc, then Tab, leaves the editor)
 }
-export interface ThemeSettings extends EffectSettings, EditorSettings {
+export interface ThemeSettings extends EffectSettings, EditorSettings, PreviewSettings {
   dark: boolean;
   bgEditor: string; bgPreview: string; text: string; accent: string; codeBg: string;
   gradient: GradientSettings;
@@ -42,6 +58,7 @@ export interface ThemeSettings extends EffectSettings, EditorSettings {
   editorFont: string; previewFont: string;
   editorFontSize: number; editorLineHeight: number; previewFontSize: number; previewLineHeight: number; colWidth: number;
   ligatures: boolean; lineNumbers: boolean;
+  exportCompress?: boolean; // HTML export: downscale + re-encode embedded images
 }
 export type ResolvedSettings = Required<ThemeSettings>;
 export type NumKey = { [K in keyof ResolvedSettings]: ResolvedSettings[K] extends number ? K : never }[keyof ResolvedSettings];
